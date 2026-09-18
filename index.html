@@ -85,9 +85,13 @@ async function conectar() {
         document.getElementById("estado").innerText =
         "Buscando lentes...";
 
-       device = await navigator.bluetooth.requestDevice({
+      device = await navigator.bluetooth.requestDevice({
 
-    acceptAllDevices: true,
+    filters: [
+        {
+            name: "LENTES-ESP32"
+        }
+    ],
 
     optionalServices: [SERVICE_UUID]
 
