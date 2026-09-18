@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Lentes Inteligentes</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #111;
+            color: white;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            font-size: 30px;
+        }
+
+        button {
+            background: #ffffff;
+            color: #111;
+            border: none;
+            padding: 15px 25px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        #estado {
+            margin-top: 25px;
+            font-size: 18px;
+        }
+
+        #ubicacion {
+            margin-top: 30px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>🕶️ Lentes Inteligentes</h1>
+
+    <p>Asistente de ubicación</p>
+
+    <button id="conectar">
+        CONECTAR LENTES
+    </button>
+
+    <div id="estado">
+        Desconectado
+    </div>
+
+    <div id="ubicacion">
+        Esperando ubicación...
+    </div>
+
+
+<script>
+
+const SERVICE_UUID =
+"12345678-1234-1234-1234-1234567890AB";
+
+const CHARACTERISTIC_UUID =
+"87654321-4321-4321-4321-BA0987654321";
+
+
+let device;
+let characteristic;
+
+
+document.getElementById("conectar").addEventListener("click", conectar);
+
+
+async function conectar() {
+
+    try {
+
+        document.getElementById("estado").innerText =
+        "Buscando lentes...";
+
+        device = await navigator.bluetooth.requestDevice({
+
+            filters: [
+                {
+                    name: "LENTES-ESP32"
+                }
+            ],
+
+            optionalServices: [SERVICE_UUID]
+
+        });
+
+
+        document.getElementById("estado").innerText =
+        "Conectando...";
+
+
+        const server =
+        await device.gatt.connect();
+
+
+        const service =
+        await server.getPrimaryService(SERVICE_UUID);
+
+
+        characteristic =
+        await service.getCharacteristic(
+            CHARACTERISTIC_UUID
+        );
+
+
+        await characteristic.startNotifications();
+
+
+        characteristic.addEventListener(
+            "characteristicvaluechanged",
+            recibirUbicacion
+        );
+
+
+        document.getElementById("estado").innerText =
+        "🟢 Lentes conectados";
+
+
+        hablar("Lentes conectados correctamente");
+
+
+    } catch(error) {
+
+        console.log(error);
+
+        document.getElementById("estado").innerText =
+        "❌ No se pudo conectar";
+
+    }
+
+}
+
+
+function recibirUbicacion(event) {
+
+    const decoder =
+    new TextDecoder("utf-8");
+
+
+    const mensaje =
+    decoder.decode(event.target.value);
+
+
+    console.log("Mensaje recibido:", mensaje);
+
+
+    document.getElementById("ubicacion").innerText =
+    mensaje;
+
+
+    hablar(mensaje);
+
+}
+
+
+function hablar(texto) {
+
+    const voz =
+    new SpeechSynthesisUtterance(texto);
+
+
+    voz.lang = "es-AR";
+
+    voz.rate = 0.9;
+
+    voz.pitch = 1;
+
+
+    speechSynthesis.cancel();
+
+    speechSynthesis.speak(voz);
+
+}
+
+</script>
+
+</body>
+</html>
