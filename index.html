@@ -1,190 +1,432 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Lentes Inteligentes</title>
+  <title>Lentes Inteligentes</title>
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #111;
-            color: white;
-            text-align: center;
-            padding: 40px 20px;
-        }
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: white;
+      text-align: center;
+    }
 
-        h1 {
-            font-size: 30px;
-        }
+    .contenedor {
+      max-width: 500px;
+      margin: auto;
+      padding: 30px 20px;
+    }
 
-        button {
-            background: #ffffff;
-            color: #111;
-            border: none;
-            padding: 15px 25px;
-            font-size: 18px;
-            border-radius: 10px;
-            cursor: pointer;
-            margin-top: 20px;
-        }
+    h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
 
-        #estado {
-            margin-top: 25px;
-            font-size: 18px;
-        }
+    .subtitulo {
+      font-size: 18px;
+      color: #ccc;
+      margin-bottom: 35px;
+    }
 
-        #ubicacion {
-            margin-top: 30px;
-            font-size: 24px;
-            font-weight: bold;
-        }
-    </style>
+    button {
+      width: 100%;
+      padding: 20px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 15px;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #conectar {
+      background: white;
+      color: black;
+    }
+
+    #audio {
+      background: #333;
+      color: white;
+    }
+
+    .estado {
+      margin-top: 25px;
+      padding: 18px;
+      border-radius: 12px;
+      background: #222;
+      font-size: 18px;
+    }
+
+    .mensaje {
+      margin-top: 20px;
+      font-size: 22px;
+      min-height: 60px;
+    }
+
+    .escuchando {
+      margin-top: 20px;
+      font-size: 22px;
+      font-weight: bold;
+    }
+  </style>
 </head>
 
 <body>
 
+  <div class="contenedor">
+
     <h1>🕶️ Lentes Inteligentes</h1>
 
-    <p>Asistente de ubicación</p>
+    <div class="subtitulo">
+      Sistema de asistencia para personas con discapacidad visual
+    </div>
 
     <button id="conectar">
-        CONECTAR LENTES
+      CONECTAR LENTES
     </button>
 
-    <div id="estado">
-        Desconectado
+    <button id="audio">
+      ACTIVAR VOZ
+    </button>
+
+    <div class="estado" id="estado">
+      Estado: esperando conexión
     </div>
 
-    <div id="ubicacion">
-        Esperando ubicación...
+    <div class="mensaje" id="mensaje">
     </div>
+
+    <div class="escuchando" id="escuchando">
+    </div>
+
+  </div>
 
 
 <script>
 
-const SERVICE_UUID =
-"12345678-1234-1234-1234-1234567890AB";
+  // =========================
+  // CONFIGURACIÓN BLUETOOTH
+  // =========================
 
-const CHARACTERISTIC_UUID =
-"87654321-4321-4321-4321-BA0987654321";
+  const SERVICE_UUID =
+    "12345678-1234-1234-1234-1234567890AB";
 
-
-let device;
-let characteristic;
-
-
-document.getElementById("conectar").addEventListener("click", conectar);
+  const CHARACTERISTIC_UUID =
+    "87654321-4321-4321-4321-BA0987654321";
 
 
-async function conectar() {
+  let dispositivo = null;
+  let caracteristica = null;
+
+
+  // =========================
+  // ELEMENTOS DE LA PÁGINA
+  // =========================
+
+  const botonConectar =
+    document.getElementById("conectar");
+
+  const botonAudio =
+    document.getElementById("audio");
+
+  const estado =
+    document.getElementById("estado");
+
+  const mensaje =
+    document.getElementById("mensaje");
+
+  const escuchando =
+    document.getElementById("escuchando");
+
+
+  // =========================
+  // VOZ
+  // =========================
+
+  function hablar(texto) {
+
+    console.log("Voz:", texto);
+
+    if (!("speechSynthesis" in window)) {
+
+      console.log("Speech Synthesis no disponible");
+
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const voz = new SpeechSynthesisUtterance(texto);
+
+    voz.lang = "es-AR";
+    voz.rate = 0.9;
+    voz.pitch = 1;
+    voz.volume = 1;
+
+    window.speechSynthesis.speak(voz);
+  }
+
+
+  // =========================
+  // ACTIVAR AUDIO
+  // =========================
+
+  botonAudio.addEventListener("click", () => {
+
+    hablar("Sistema de voz activado.");
+
+    estado.innerText =
+      "Estado: voz activada";
+
+  });
+
+
+  // =========================
+  // CONECTAR BLUETOOTH
+  // =========================
+
+  botonConectar.addEventListener("click", async () => {
 
     try {
 
-        document.getElementById("estado").innerText =
-        "Buscando lentes...";
+      estado.innerText =
+        "Estado: buscando lentes...";
 
-      device = await navigator.bluetooth.requestDevice({
+      dispositivo = await navigator.bluetooth.requestDevice({
 
-    filters: [
-        {
+        filters: [
+          {
             name: "LENTES-ESP32"
-        }
-    ],
+          }
+        ],
 
-    optionalServices: [SERVICE_UUID]
+        optionalServices: [
+          SERVICE_UUID
+        ]
 
-});
-        
-
-
-        document.getElementById("estado").innerText =
-        "Conectando...";
+      });
 
 
-        const server =
-        await device.gatt.connect();
+      estado.innerText =
+        "Estado: conectando...";
 
 
-        const service =
-        await server.getPrimaryService(SERVICE_UUID);
+      const servidor =
+        await dispositivo.gatt.connect();
 
 
-        characteristic =
-        await service.getCharacteristic(
-            CHARACTERISTIC_UUID
+      const servicio =
+        await servidor.getPrimaryService(
+          SERVICE_UUID
         );
 
 
-        await characteristic.startNotifications();
-
-
-        characteristic.addEventListener(
-            "characteristicvaluechanged",
-            recibirUbicacion
+      caracteristica =
+        await servicio.getCharacteristic(
+          CHARACTERISTIC_UUID
         );
 
 
-        document.getElementById("estado").innerText =
-        "🟢 Lentes conectados";
+      await caracteristica.startNotifications();
 
 
-        hablar("Lentes conectados correctamente");
+      caracteristica.addEventListener(
+        "characteristicvaluechanged",
+        recibirMensaje
+      );
 
 
-    } catch(error) {
+      estado.innerText =
+        "Estado: 🟢 lentes conectados";
 
-        console.log(error);
 
-        document.getElementById("estado").innerText =
-        "❌ No se pudo conectar";
+      hablar("Lentes conectados correctamente.");
+
+
+    } catch (error) {
+
+      console.error(error);
+
+      estado.innerText =
+        "Estado: error al conectar";
 
     }
 
-}
+  });
 
 
-function recibirUbicacion(event) {
+  // =========================
+  // RECIBIR MENSAJE DEL ESP32
+  // =========================
+
+  function recibirMensaje(event) {
+
+    const valor =
+      event.target.value;
 
     const decoder =
-    new TextDecoder("utf-8");
+      new TextDecoder("utf-8");
+
+    const texto =
+      decoder.decode(valor).trim();
 
 
-    const mensaje =
-    decoder.decode(event.target.value);
+    console.log(
+      "Mensaje recibido:",
+      texto
+    );
 
 
-    console.log("Mensaje recibido:", mensaje);
+    // =========================
+    // MODO DESTINO
+    // =========================
+
+    if (texto === "MODO_DESTINO") {
+
+      mensaje.innerText =
+        "🎤 Esperando destino...";
+
+      hablar(
+        "¿A dónde querés ir?"
+      );
+
+      escucharDestino();
+
+      return;
+    }
 
 
-    document.getElementById("ubicacion").innerText =
-    mensaje;
+    // =========================
+    // UBICACIÓN NORMAL
+    // =========================
+
+    mensaje.innerText =
+      texto;
+
+    hablar(texto);
+
+  }
 
 
-    hablar(mensaje);
+  // =========================
+  // RECONOCIMIENTO DE VOZ
+  // =========================
 
-}
+  function escucharDestino() {
 
-
-function hablar(texto) {
-
-    const voz =
-    new SpeechSynthesisUtterance(texto);
-
-
-    voz.lang = "es-AR";
-
-    voz.rate = 0.9;
-
-    voz.pitch = 1;
+    const SpeechRecognition =
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition;
 
 
-    speechSynthesis.cancel();
+    if (!SpeechRecognition) {
 
-    speechSynthesis.speak(voz);
+      mensaje.innerText =
+        "El reconocimiento de voz no está disponible.";
 
-}
+      hablar(
+        "El reconocimiento de voz no está disponible en este dispositivo."
+      );
+
+      return;
+    }
+
+
+    const reconocimiento =
+      new SpeechRecognition();
+
+
+    reconocimiento.lang =
+      "es-AR";
+
+    reconocimiento.continuous =
+      false;
+
+    reconocimiento.interimResults =
+      false;
+
+
+    escuchando.innerText =
+      "🎤 ESCUCHANDO...";
+
+
+    reconocimiento.start();
+
+
+    reconocimiento.onresult =
+      function(event) {
+
+        const destino =
+          event.results[0][0].transcript;
+
+
+        console.log(
+          "Destino:",
+          destino
+        );
+
+
+        mensaje.innerText =
+          "Destino: " + destino;
+
+
+        escuchando.innerText =
+          "";
+
+
+        hablar(
+          "Entendí " + destino
+        );
+
+
+        // ==================================
+        // POR AHORA SOLO MOSTRAMOS EL DESTINO
+        // ==================================
+        //
+        // Más adelante:
+        //
+        // destino → buscar lugar
+        // destino → calcular ruta
+        // destino → navegación
+        //
+
+
+      };
+
+
+    reconocimiento.onerror =
+      function(event) {
+
+        console.error(
+          "Error de reconocimiento:",
+          event.error
+        );
+
+
+        escuchando.innerText =
+          "";
+
+
+        hablar(
+          "No pude entender el destino. Intentá nuevamente."
+        );
+
+      };
+
+
+    reconocimiento.onend =
+      function() {
+
+        escuchando.innerText =
+          "";
+
+      };
+
+  }
 
 </script>
 
